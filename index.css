@@ -1,0 +1,409 @@
+import { useState } from "react";
+import {
+  Truck,
+  Thermometer,
+  Droplets,
+  AlertTriangle,
+  CheckCircle,
+  MapPin,
+  Clock,
+  Scale,
+  Camera,
+  ChevronRight,
+  Package,
+  Navigation,
+} from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+const historicoViagens = [
+  { id: "V-018", destino: "Coop. Central – Sorriso", data: "07/06", produto: "Soja", carga: "22 t", perda: "0 kg", status: "ok" },
+  { id: "V-017", destino: "Armazém Geral – Lucas", data: "02/06", produto: "Milho", carga: "18 t", perda: "120 kg", status: "alerta" },
+  { id: "V-016", destino: "Coop. Central – Sorriso", data: "28/05", produto: "Soja", carga: "20 t", perda: "0 kg", status: "ok" },
+  { id: "V-015", destino: "Frigorífico – Sinop", data: "21/05", produto: "Trigo", carga: "15 t", perda: "200 kg", status: "alerta" },
+];
+
+const perdaChart = [
+  { mes: "Mar", kg: 80 },
+  { mes: "Abr", kg: 210 },
+  { mes: "Mai", kg: 320 },
+  { mes: "Jun", kg: 120 },
+];
+
+const alertasTransporte = [
+  {
+    nivel: "alerta",
+    texto: "Temperatura da carroceria em 29 °C — acima do ideal para soja.",
+  },
+  {
+    nivel: "info",
+    texto: "BR-163: trecho com pista danificada entre km 742 e km 756.",
+  },
+];
+
+const recomendacoes = [
+  "Cubra a carroceria com lona antes de iniciar o carregamento.",
+  "Prefira transportar nas primeiras horas da manhã para evitar calor excessivo.",
+  "Verifique a vedação da caçamba para evitar derramamento em curvas.",
+];
+
+export function TransportScreen() {
+  const [tab, setTab] = useState<"atual" | "historico">("atual");
+  const [ocorrenciaModal, setOcorrenciaModal] = useState(false);
+  const [entregaModal, setEntregaModal] = useState(false);
+  const [ocorrenciaNota, setOcorrenciaNota] = useState("");
+  const [viagemIniciada, setViagemIniciada] = useState(true);
+  const [entregaConfirmada, setEntregaConfirmada] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-5 pb-6">
+      {/* tabs */}
+      <div className="flex bg-[#e6edd8] rounded-xl p-1">
+        {(["atual", "historico"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-2 rounded-lg text-sm transition-all ${
+              tab === t
+                ? "bg-white text-[#1c2b12] shadow-sm"
+                : "text-[#5a6e44]"
+            }`}
+          >
+            {t === "atual" ? "Em Andamento" : "Histórico"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "atual" && (
+        <>
+          {/* status da viagem */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-[rgba(45,80,22,0.1)]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-[#5a6e44] uppercase tracking-wide">Viagem atual</span>
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  entregaConfirmada
+                    ? "bg-[#e6edd8] text-[#2d5016]"
+                    : "bg-[#fef3c7] text-[#92400e]"
+                }`}
+              >
+                {entregaConfirmada ? "Entregue" : "Em trânsito"}
+              </span>
+            </div>
+            <h3 className="text-[#1c2b12] mt-1">V-019 — Soja · 24 t</h3>
+            <div className="flex items-center gap-2 mt-2">
+              <Navigation size={14} className="text-[#2d5016]" />
+              <p className="text-sm text-[#5a6e44]">Coop. Central – Sorriso, MT</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <Clock size={14} className="text-[#5a6e44]" />
+              <p className="text-sm text-[#5a6e44]">Saída: 10/06 às 06:30 · Chegada est.: 14h00</p>
+            </div>
+          </div>
+
+          {/* mapa estilizado */}
+          <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-[rgba(45,80,22,0.1)]">
+            <div className="relative h-44 bg-[#ddebd0]">
+              {/* representação visual da rota */}
+              <svg viewBox="0 0 360 176" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                {/* fundo estradeiro */}
+                <rect width="360" height="176" fill="#ddebd0" />
+                {/* grid de campos */}
+                {[0,1,2,3].map(r =>
+                  [0,1,2,3,4].map(c => (
+                    <rect
+                      key={`${r}-${c}`}
+                      x={c * 72}
+                      y={r * 44}
+                      width="70"
+                      height="42"
+                      fill={((r + c) % 2 === 0) ? "#c8dfb0" : "#b8d49a"}
+                      rx="2"
+                    />
+                  ))
+                )}
+                {/* estrada */}
+                <path d="M 30 160 Q 120 100 180 88 Q 240 76 330 30" stroke="#c8a96e" strokeWidth="8" fill="none" strokeLinecap="round" />
+                <path d="M 30 160 Q 120 100 180 88 Q 240 76 330 30" stroke="#e8d4a8" strokeWidth="4" fill="none" strokeLinecap="round" strokeDasharray="12 8" />
+                {/* ponto de origem */}
+                <circle cx="30" cy="160" r="7" fill="#2d5016" />
+                <circle cx="30" cy="160" r="4" fill="white" />
+                {/* caminhão */}
+                <circle cx="165" cy="92" r="9" fill="#2d5016" />
+                <text x="165" y="96" textAnchor="middle" fill="white" fontSize="10">🚛</text>
+                {/* destino */}
+                <circle cx="330" cy="30" r="7" fill="#d97706" />
+                <circle cx="330" cy="30" r="4" fill="white" />
+              </svg>
+              <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                <MapPin size={12} className="text-[#2d5016]" />
+                <span className="text-xs text-[#2d5016] bg-white/80 px-2 py-0.5 rounded-full">
+                  Fazenda São João
+                </span>
+              </div>
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <MapPin size={12} className="text-[#d97706]" />
+                <span className="text-xs text-[#d97706] bg-white/80 px-2 py-0.5 rounded-full">
+                  Coop. Central
+                </span>
+              </div>
+            </div>
+            <div className="px-4 py-3 bg-[#f0ede6] flex items-center justify-between">
+              <span className="text-xs text-[#5a6e44]">Distância restante</span>
+              <span className="text-sm text-[#1c2b12] font-medium">142 km · ~2h30</span>
+            </div>
+          </div>
+
+          {/* alertas */}
+          <div className="space-y-2">
+            {alertasTransporte.map((a, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-2 rounded-xl px-4 py-3 border ${
+                  a.nivel === "alerta"
+                    ? "bg-[#fef3c7] border-[#d97706]/30"
+                    : "bg-[#e6edd8] border-[rgba(45,80,22,0.2)]"
+                }`}
+              >
+                <AlertTriangle
+                  size={16}
+                  className={`shrink-0 mt-0.5 ${
+                    a.nivel === "alerta" ? "text-[#d97706]" : "text-[#2d5016]"
+                  }`}
+                />
+                <p
+                  className={`text-sm ${
+                    a.nivel === "alerta" ? "text-[#92400e]" : "text-[#2d5016]"
+                  }`}
+                >
+                  {a.texto}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* indicadores da carga */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Peso Carregado", value: "23,8 t", meta: "24 t", icon: Scale, ok: true },
+              { label: "Temperatura", value: "29 °C", meta: "< 25 °C", icon: Thermometer, ok: false },
+              { label: "Umidade", value: "64 %", meta: "60–70 %", icon: Droplets, ok: true },
+            ].map((ind) => (
+              <div
+                key={ind.label}
+                className="bg-white rounded-2xl p-3 shadow-sm border border-[rgba(45,80,22,0.1)] flex flex-col items-center text-center gap-1"
+              >
+                <ind.icon
+                  size={16}
+                  className={ind.ok ? "text-[#2d5016]" : "text-[#d97706]"}
+                />
+                <span className="text-xs text-[#5a6e44] leading-tight">{ind.label}</span>
+                <span
+                  className={`text-base font-semibold ${
+                    ind.ok ? "text-[#1c2b12]" : "text-[#d97706]"
+                  }`}
+                >
+                  {ind.value}
+                </span>
+                <span className="text-xs text-[#5a6e44]">Meta: {ind.meta}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* recomendações */}
+          <div className="bg-[#edf2e3] rounded-2xl p-4 space-y-2">
+            <h3 className="text-sm text-[#1c2b12] mb-1">Recomendações</h3>
+            {recomendacoes.map((r, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-[#2d5016] text-sm shrink-0">•</span>
+                <p className="text-sm text-[#2d5016]">{r}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* ações */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setOcorrenciaModal(true)}
+              className="flex-1 flex items-center justify-center gap-2 border border-[#2d5016] text-[#2d5016] rounded-2xl py-3 text-sm active:opacity-70 transition-opacity"
+            >
+              <Camera size={16} />
+              Registrar Ocorrência
+            </button>
+            <button
+              onClick={() => setEntregaModal(true)}
+              disabled={entregaConfirmada}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-2xl py-3 text-sm transition-opacity ${
+                entregaConfirmada
+                  ? "bg-[#e6edd8] text-[#5a6e44] cursor-default"
+                  : "bg-[#2d5016] text-white active:opacity-80"
+              }`}
+            >
+              <CheckCircle size={16} />
+              {entregaConfirmada ? "Entregue" : "Confirmar Entrega"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {tab === "historico" && (
+        <>
+          {/* gráfico de perdas */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-[rgba(45,80,22,0.1)]">
+            <h3 className="text-sm text-[#1c2b12] mb-4">Perdas por Mês (kg)</h3>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={perdaChart} margin={{ top: 0, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6edd8" />
+                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "#5a6e44" }} />
+                <YAxis tick={{ fontSize: 11, fill: "#5a6e44" }} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#fff",
+                    border: "1px solid #e6edd8",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                <Bar key="perda-bar" dataKey="kg" fill="#2d5016" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* lista de viagens */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(45,80,22,0.1)] overflow-hidden">
+            <div className="px-4 pt-4 pb-2">
+              <h3 className="text-sm text-[#1c2b12]">Últimas Viagens</h3>
+            </div>
+            {historicoViagens.map((v, i) => (
+              <div
+                key={v.id}
+                className={`flex items-center justify-between px-4 py-3 ${
+                  i < historicoViagens.length - 1 ? "border-b border-[rgba(45,80,22,0.07)]" : ""
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      v.status === "ok" ? "bg-[#2d5016]" : "bg-[#d97706]"
+                    }`}
+                  />
+                  <div>
+                    <p className="text-sm text-[#1c2b12]">
+                      {v.id} — {v.produto}
+                    </p>
+                    <p className="text-xs text-[#5a6e44]">
+                      {v.data} · {v.destino}
+                    </p>
+                    <p className="text-xs text-[#5a6e44]">
+                      Carga: {v.carga} · Perda: {v.perda}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {v.status === "ok" ? (
+                    <CheckCircle size={16} className="text-[#2d5016]" />
+                  ) : (
+                    <AlertTriangle size={16} className="text-[#d97706]" />
+                  )}
+                  <ChevronRight size={14} className="text-[#5a6e44]" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* resumo de desempenho */}
+          <div className="bg-[#edf2e3] rounded-2xl p-4">
+            <h3 className="text-sm text-[#1c2b12] mb-3">Desempenho no Período</h3>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-xl font-semibold text-[#2d5016]">19</p>
+                <p className="text-xs text-[#5a6e44]">Viagens</p>
+              </div>
+              <div>
+                <p className="text-xl font-semibold text-[#2d5016]">89%</p>
+                <p className="text-xs text-[#5a6e44]">Sem perdas</p>
+              </div>
+              <div>
+                <p className="text-xl font-semibold text-[#d97706]">730 kg</p>
+                <p className="text-xs text-[#5a6e44]">Total perdido</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* modal registrar ocorrência */}
+      {ocorrenciaModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4">
+            <h2 className="text-[#1c2b12]">Registrar Ocorrência</h2>
+            <p className="text-sm text-[#5a6e44]">
+              Descreva o que aconteceu durante o transporte e registre com foto se necessário.
+            </p>
+            <textarea
+              className="w-full border border-[rgba(45,80,22,0.2)] rounded-xl p-3 text-sm text-[#1c2b12] resize-none focus:outline-none focus:ring-2 focus:ring-[#2d5016]"
+              rows={4}
+              placeholder="Ex.: Perda de carga na curva do km 142, lona solta..."
+              value={ocorrenciaNota}
+              onChange={(e) => setOcorrenciaNota(e.target.value)}
+            />
+            <button className="w-full border border-dashed border-[rgba(45,80,22,0.4)] rounded-xl py-3 text-sm text-[#5a6e44] flex items-center justify-center gap-2">
+              <Camera size={16} />
+              Adicionar Foto
+            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setOcorrenciaModal(false)}
+                className="flex-1 border border-[rgba(45,80,22,0.3)] text-[#2d5016] rounded-xl py-3 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setOcorrenciaNota("");
+                  setOcorrenciaModal(false);
+                }}
+                className="flex-1 bg-[#2d5016] text-white rounded-xl py-3 text-sm"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* modal confirmar entrega */}
+      {entregaModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4">
+            <h2 className="text-[#1c2b12]">Confirmar Entrega</h2>
+            <p className="text-sm text-[#5a6e44]">
+              Confirme que a carga foi entregue corretamente no destino.
+            </p>
+            <div className="bg-[#edf2e3] rounded-xl p-4 space-y-1">
+              <p className="text-sm text-[#1c2b12]">Destino: Coop. Central – Sorriso</p>
+              <p className="text-sm text-[#5a6e44]">Produto: Soja · 24 t</p>
+              <p className="text-sm text-[#5a6e44]">Data: 10/06/2026 · 14h15</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEntregaModal(false)}
+                className="flex-1 border border-[rgba(45,80,22,0.3)] text-[#2d5016] rounded-xl py-3 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setEntregaConfirmada(true);
+                  setEntregaModal(false);
+                }}
+                className="flex-1 bg-[#2d5016] text-white rounded-xl py-3 text-sm"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

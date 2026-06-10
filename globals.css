@@ -1,0 +1,331 @@
+import { useState } from "react";
+import {
+  Thermometer,
+  Droplets,
+  AlertTriangle,
+  CheckCircle,
+  ClipboardList,
+  ChevronRight,
+  TrendingDown,
+  Bug,
+  Wind,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+const chartData = [
+  { dia: "Seg", temp: 22, umid: 58 },
+  { dia: "Ter", temp: 24, umid: 61 },
+  { dia: "Qua", temp: 23, umid: 63 },
+  { dia: "Qui", temp: 26, umid: 67 },
+  { dia: "Sex", temp: 25, umid: 65 },
+  { dia: "Sáb", temp: 27, umid: 70 },
+  { dia: "Dom", temp: 28, umid: 74 },
+];
+
+const lotes = [
+  { id: "L-001", produto: "Soja", quantidade: "12,5 t", status: "ok", armazem: "Armazém A" },
+  { id: "L-002", produto: "Milho", quantidade: "8,2 t", status: "alerta", armazem: "Armazém B" },
+  { id: "L-003", produto: "Trigo", quantidade: "5,0 t", status: "ok", armazem: "Armazém A" },
+  { id: "L-004", produto: "Soja", quantidade: "9,8 t", status: "critico", armazem: "Armazém C" },
+];
+
+const historico = [
+  { data: "08/06", tipo: "Umidade elevada", lote: "L-002", acao: "Ventilação ativada" },
+  { data: "06/06", tipo: "Praga detectada", lote: "L-004", acao: "Fumigação realizada" },
+  { data: "03/06", tipo: "Temperatura alta", lote: "L-004", acao: "Resfriamento aplicado" },
+];
+
+const recomendacoes = [
+  { icone: Wind, texto: "Ative a ventilação no Armazém B — umidade acima de 70% favorece fungos." },
+  { icone: Bug, texto: "Inspecione o Lote L-004 para presença de carunchos." },
+  { icone: TrendingDown, texto: "Temperatura crescente na semana — monitore diariamente." },
+];
+
+function GaugeCard({
+  label,
+  value,
+  unit,
+  icon: Icon,
+  color,
+  min,
+  max,
+  ideal,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  icon: React.ElementType;
+  color: string;
+  min: number;
+  max: number;
+  ideal: string;
+}) {
+  const pct = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+  const isAlert = color === "amber" || color === "red";
+
+  return (
+    <div className="bg-white rounded-2xl p-4 flex-1 shadow-sm border border-[rgba(45,80,22,0.1)]">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-[#5a6e44] uppercase tracking-wide">{label}</span>
+        <Icon
+          size={18}
+          className={
+            color === "green"
+              ? "text-[#2d5016]"
+              : color === "amber"
+              ? "text-[#d97706]"
+              : "text-[#b91c1c]"
+          }
+        />
+      </div>
+      <div className="flex items-end gap-1 mb-3">
+        <span
+          className={`text-4xl font-semibold ${
+            color === "green"
+              ? "text-[#2d5016]"
+              : color === "amber"
+              ? "text-[#d97706]"
+              : "text-[#b91c1c]"
+          }`}
+        >
+          {value}
+        </span>
+        <span className="text-sm text-[#5a6e44] mb-1">{unit}</span>
+      </div>
+      <div className="w-full h-2 rounded-full bg-[#e6edd8] overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${
+            color === "green"
+              ? "bg-[#2d5016]"
+              : color === "amber"
+              ? "bg-[#d97706]"
+              : "bg-[#b91c1c]"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-[#5a6e44] mt-2">Ideal: {ideal}</p>
+      {isAlert && (
+        <p
+          className={`text-xs mt-1 font-medium ${
+            color === "amber" ? "text-[#d97706]" : "text-[#b91c1c]"
+          }`}
+        >
+          ⚠ Atenção necessária
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function StorageScreen() {
+  const [inspModal, setInspModal] = useState(false);
+  const [inspNota, setInspNota] = useState("");
+
+  return (
+    <div className="flex flex-col gap-5 pb-6">
+      {/* alertas */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl px-4 py-3">
+          <AlertTriangle size={16} className="text-[#d97706] shrink-0" />
+          <p className="text-sm text-[#92400e]">
+            <strong>Lote L-002 (Milho):</strong> Umidade em 74% — risco de fungos.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 bg-[#fee2e2] border border-[#b91c1c]/30 rounded-xl px-4 py-3">
+          <AlertTriangle size={16} className="text-[#b91c1c] shrink-0" />
+          <p className="text-sm text-[#7f1d1d]">
+            <strong>Lote L-004 (Soja):</strong> Temperatura crítica — 28 °C acima do limite.
+          </p>
+        </div>
+      </div>
+
+      {/* indicadores */}
+      <div className="flex gap-3">
+        <GaugeCard
+          label="Temperatura"
+          value={28}
+          unit="°C"
+          icon={Thermometer}
+          color="red"
+          min={0}
+          max={40}
+          ideal="15–25 °C"
+        />
+        <GaugeCard
+          label="Umidade"
+          value={74}
+          unit="%"
+          icon={Droplets}
+          color="amber"
+          min={0}
+          max={100}
+          ideal="60–70 %"
+        />
+      </div>
+
+      {/* gráfico */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-[rgba(45,80,22,0.1)]">
+        <div className="flex items-center gap-4 mb-3">
+          <h3 className="text-sm text-[#1c2b12]">Histórico — 7 dias</h3>
+          <div className="flex items-center gap-3 ml-auto">
+            <span className="flex items-center gap-1 text-xs text-[#5a6e44]">
+              <span className="inline-block w-3 h-0.5 bg-[#2d5016]" />Temp (°C)
+            </span>
+            <span className="flex items-center gap-1 text-xs text-[#5a6e44]">
+              <span className="inline-block w-3 h-0.5 bg-[#d97706]" />Umidade (%)
+            </span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={140}>
+          <LineChart data={chartData} margin={{ top: 0, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e6edd8" />
+            <XAxis dataKey="dia" tick={{ fontSize: 11, fill: "#5a6e44" }} />
+            <YAxis tick={{ fontSize: 11, fill: "#5a6e44" }} />
+            <Tooltip
+              contentStyle={{
+                background: "#fff",
+                border: "1px solid #e6edd8",
+                borderRadius: 8,
+                fontSize: 12,
+              }}
+            />
+            <Line key="temp-line" type="monotone" dataKey="temp" stroke="#2d5016" strokeWidth={2} dot={false} />
+            <Line key="umid-line" type="monotone" dataKey="umid" stroke="#d97706" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* lotes */}
+      <div className="bg-white rounded-2xl shadow-sm border border-[rgba(45,80,22,0.1)] overflow-hidden">
+        <div className="px-4 pt-4 pb-2">
+          <h3 className="text-sm text-[#1c2b12]">Lotes Armazenados</h3>
+        </div>
+        {lotes.map((l, i) => (
+          <div
+            key={l.id}
+            className={`flex items-center justify-between px-4 py-3 ${
+              i < lotes.length - 1 ? "border-b border-[rgba(45,80,22,0.07)]" : ""
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  l.status === "ok"
+                    ? "bg-[#2d5016]"
+                    : l.status === "alerta"
+                    ? "bg-[#d97706]"
+                    : "bg-[#b91c1c]"
+                }`}
+              />
+              <div>
+                <p className="text-sm text-[#1c2b12]">
+                  {l.id} — {l.produto}
+                </p>
+                <p className="text-xs text-[#5a6e44]">
+                  {l.armazem} · {l.quantidade}
+                </p>
+              </div>
+            </div>
+            {l.status === "ok" ? (
+              <CheckCircle size={16} className="text-[#2d5016]" />
+            ) : (
+              <AlertTriangle
+                size={16}
+                className={l.status === "alerta" ? "text-[#d97706]" : "text-[#b91c1c]"}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* histórico de ocorrências */}
+      <div className="bg-white rounded-2xl shadow-sm border border-[rgba(45,80,22,0.1)] overflow-hidden">
+        <div className="px-4 pt-4 pb-2">
+          <h3 className="text-sm text-[#1c2b12]">Histórico de Ocorrências</h3>
+        </div>
+        {historico.map((h, i) => (
+          <div
+            key={i}
+            className={`flex items-start gap-3 px-4 py-3 ${
+              i < historico.length - 1 ? "border-b border-[rgba(45,80,22,0.07)]" : ""
+            }`}
+          >
+            <span className="text-xs text-[#5a6e44] shrink-0 mt-0.5">{h.data}</span>
+            <div>
+              <p className="text-sm text-[#1c2b12]">{h.tipo}</p>
+              <p className="text-xs text-[#5a6e44]">
+                {h.lote} · {h.acao}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* recomendações */}
+      <div className="bg-[#edf2e3] rounded-2xl p-4 space-y-3">
+        <h3 className="text-sm text-[#1c2b12]">Recomendações</h3>
+        {recomendacoes.map((r, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <r.icone size={16} className="text-[#2d5016] shrink-0 mt-0.5" />
+            <p className="text-sm text-[#2d5016]">{r.texto}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* botão inspeção */}
+      <button
+        onClick={() => setInspModal(true)}
+        className="w-full flex items-center justify-center gap-2 bg-[#2d5016] text-white rounded-2xl py-4 active:opacity-80 transition-opacity"
+      >
+        <ClipboardList size={18} />
+        <span>Registrar Inspeção</span>
+        <ChevronRight size={16} />
+      </button>
+
+      {/* modal de inspeção */}
+      {inspModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4">
+            <h2 className="text-[#1c2b12]">Nova Inspeção</h2>
+            <p className="text-sm text-[#5a6e44]">
+              Registre as condições observadas durante a vistoria do armazém.
+            </p>
+            <textarea
+              className="w-full border border-[rgba(45,80,22,0.2)] rounded-xl p-3 text-sm text-[#1c2b12] resize-none focus:outline-none focus:ring-2 focus:ring-[#2d5016]"
+              rows={4}
+              placeholder="Descreva o que foi observado..."
+              value={inspNota}
+              onChange={(e) => setInspNota(e.target.value)}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setInspModal(false)}
+                className="flex-1 border border-[rgba(45,80,22,0.3)] text-[#2d5016] rounded-xl py-3 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setInspNota("");
+                  setInspModal(false);
+                }}
+                className="flex-1 bg-[#2d5016] text-white rounded-xl py-3 text-sm"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

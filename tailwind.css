@@ -1,0 +1,76 @@
+import { useState } from "react";
+import { Warehouse, Truck, Bell, User } from "lucide-react";
+import { StorageScreen } from "./components/StorageScreen";
+import { TransportScreen } from "./components/TransportScreen";
+
+type Screen = "armazenamento" | "transporte";
+
+const navItems = [
+  { id: "armazenamento" as Screen, label: "Armazém", icon: Warehouse },
+  { id: "transporte" as Screen, label: "Transporte", icon: Truck },
+];
+
+export default function App() {
+  const [screen, setScreen] = useState<Screen>("armazenamento");
+
+  return (
+    <div className="min-h-screen bg-[#f0ede6] flex justify-center">
+      <div className="w-full max-w-md flex flex-col min-h-screen">
+
+        {/* header */}
+        <header className="bg-[#2d5016] px-5 pt-10 pb-5 shrink-0">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <p className="text-xs text-[#a3c47a] uppercase tracking-widest">Produzir Hoje</p>
+              <h1 className="text-white">
+                {screen === "armazenamento" ? "Armazenamento" : "Transporte"}
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="relative p-2 rounded-full bg-[#3d6b20] active:opacity-70">
+                <Bell size={18} className="text-white" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#d97706]" />
+              </button>
+              <div className="w-9 h-9 rounded-full bg-[#a3c47a] flex items-center justify-center">
+                <User size={18} className="text-[#2d5016]" />
+              </div>
+            </div>
+          </div>
+          <p className="text-[#a3c47a] text-sm">
+            {screen === "armazenamento"
+              ? "Monitoramento em tempo real dos grãos"
+              : "Acompanhamento da produção em trânsito"}
+          </p>
+        </header>
+
+        {/* conteúdo */}
+        <main className="flex-1 px-4 pt-5 overflow-y-auto">
+          {screen === "armazenamento" ? <StorageScreen /> : <TransportScreen />}
+        </main>
+
+        {/* nav bottom */}
+        <nav className="bg-white border-t border-[rgba(45,80,22,0.1)] px-6 py-3 flex justify-around shrink-0">
+          {navItems.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setScreen(id)}
+              className={`flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-colors ${
+                screen === id ? "text-[#2d5016]" : "text-[#a3b896]"
+              }`}
+            >
+              <Icon
+                size={22}
+                strokeWidth={screen === id ? 2.2 : 1.6}
+              />
+              <span className="text-xs">{label}</span>
+              {screen === id && (
+                <span className="w-1 h-1 rounded-full bg-[#2d5016]" />
+              )}
+            </button>
+          ))}
+        </nav>
+
+      </div>
+    </div>
+  );
+}
